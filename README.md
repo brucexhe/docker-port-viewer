@@ -7,3 +7,6 @@
 
 
 ![](/screenshot.png)
+
+
+大部分代码 by Gemini生成，开源，安全可靠！
