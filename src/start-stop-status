@@ -1,0 +1,53 @@
+#!/bin/sh
+
+. /etc/rc.subr
+
+NAME="docker-port-viewer"
+DAEMON="/var/packages/${NAME}/target/bin/${NAME}.py"
+
+# ================= 致命错误修复 =================
+# 在 DSM 7 中，target 目录是严格只读的！
+# 必须将日志和 PID 文件写在官方允许的 var 目录下！
+PIDFILE="/var/packages/${NAME}/var/${NAME}.pid"
+LOGFILE="/var/packages/${NAME}/var/${NAME}.log"
+# ===============================================
+
+start_daemon() {
+    echo "Starting ${NAME}..."
+    # 使用 python3 运行，并将日志写到可写的 var 目录
+    nohup python3 ${DAEMON} > ${LOGFILE} 2>&1 &
+    echo $! > ${PIDFILE}
+}
+
+stop_daemon() {
+    echo "Stopping ${NAME}..."
+    if [ -f "${PIDFILE}" ]; then
+        kill -9 $(cat ${PIDFILE}) 2>/dev/null || true
+        rm -f ${PIDFILE}
+    fi
+    # 兜底：强杀旧的进程
+    pkill -f "python3 ${DAEMON}" 2>/dev/null || true
+}
+
+case "$1" in
+    start)
+        start_daemon
+        ;;
+    stop)
+        stop_daemon
+        ;;
+    status)
+        if ps w | grep -v grep | grep "python3.*docker-port-viewer.py" | awk '{print $1}'; then
+            echo "${NAME} is running."
+            exit 0
+        else
+            echo "${NAME} is not running."
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status}"
+        exit 1
+esac
+
+exit 0
